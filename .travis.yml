@@ -1,24 +1,36 @@
-os: osx
-osx_image: xcode8.2 # 10.12
 language: cpp
 
-script:
+matrix:
+  include:
+    - os: osx
+      osx_image: xcode6.4 # 10.10
+    - os: osx
+      osx_image: xcode8   # 10.11
+    - os: osx
+      osx_image: xcode8.3 # 10.12
+
+install:
+  - export OSX_VERSION="$(sw_vers -productVersion | cut -f 1,2 -d .)"
   - git remote add upstream https://github.com/minetest/minetest -t master -f
+  - git checkout upstream/master
+  - brew update
+  - brew install freetype gettext hiredis irrlicht jpeg leveldb libogg libvorbis luajit
+  - if [[ "$OSX_VERSION" == "10.10" ]]; then brew cask install xquartz; fi
+  - git clone --depth=1 https://github.com/minetest/minetest_game games/minetest_game
+
+script:
+  - cmake
+    -DVERSION_EXTRA="dev-$OSX_VERSION"
+    -DCMAKE_BUILD_TYPE=Release -DENABLE_FREETYPE=1 -DENABLE_LEVELDB=1 -DENABLE_GETTEXT=1
+    -DENABLE_REDIS=1 -DBUILD_SERVER=0 -DCUSTOM_GETTEXT_PATH=/usr/local/opt/gettext
+    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/lib"
+  - make package
+
+before_deploy:
   - git remote set-url origin https://${GITHUB_OAUTH_TOKEN}@github.com/krondor-game/minetest
   - git remote set-branches --add origin master
   - git fetch origin
   - git push origin upstream/master:master
-
-before_deploy:
-  - git checkout origin/master
-  - brew update
-  - brew install freetype gettext hiredis irrlicht jpeg leveldb libogg libvorbis luajit
-  - git clone --depth=1 https://github.com/minetest/minetest_game games/minetest_game
-  - cmake
-    -DCMAKE_BUILD_TYPE=Release -DENABLE_FREETYPE=1 -DENABLE_LEVELDB=1 -DENABLE_GETTEXT=1
-    -DENABLE_REDIS=1 -DBUILD_SERVER=0 -DCUSTOM_GETTEXT_PATH=/usr/local/opt/gettext
-    -DCMAKE_EXE_LINKER_FLAGS="-L/usr/local/lib"
-  - make -j4 package
   - export TRAVIS_TAG=$(date +'%Y-%m-%d')
 
 deploy:
