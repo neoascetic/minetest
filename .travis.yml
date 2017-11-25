@@ -1,0 +1,4 @@
+script:
+  - "curl -H 'Content-Type: application/json'
+          --data '{\"source_type\": \"Branch\", \"source_name\": \"builds-docker-backport-0.4\"}'
+          -X POST $DOCKER_TRIGGER_URL"
